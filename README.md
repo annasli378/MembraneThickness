@@ -1,5 +1,5 @@
 # Membrane Thickness Analysis
-This repository is a collection of functions designed to analyze membrane images, typically obtained from microscopy. 
+This repository is a collection of functions designed to measure the thickness of the podocyte foot membrane based on experts masks. 
 
 ## Main functions
 ### 1. Mask Smoothing
