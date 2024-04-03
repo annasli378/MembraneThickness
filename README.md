@@ -7,21 +7,21 @@ Function: get_mask(m)
 
 Description: Smoothes the input binary mask by performing morphological operations such as closing, opening, and filling holes.
 
-Usage: smoothed_mask = get_mask(binary_mask)
+Usage: smoothed_mask = get_mask(orginal_mask)
 
 ### 2. Blob Extraction
-Function: get_blobs(maska_membrana)
+Function: get_blobs(mask)
 
 Description: Identifies and extracts individual membrane blobs from a binary membrane image. It filters out blobs that are too close to the image borders and computes additional attributes for each blob.
 
-Usage: blob_attributes, num_blobs = get_blobs(binary_membrane_image)
+Usage: result_array_for_masks, result_array_for_skels, result_array_for_edges, num_blobs = get_blobs(mask)
 
 ### 3. Width Measurement
-Function: get_widths_bwd(start, step, mask_atr, num_blobs)
+Function: get_widths_bwd(start, step, result_array_for_masks,result_array_for_skels, num_blobs)
 
 Description: Measures membrane widths along the skeletonized membrane structures using backward distance transform-based measurement.
 
-Usage: Backward Distance Transform Measurement: widths = get_widths_bwd(start, step, blob_attributes, num_blobs)
+Usage: widths = get_widths_bwd(start, step, result_array_for_masks,result_array_for_skels, num_blobs)
 
 ## Usage
  - Import the  functions into your Python environment.
