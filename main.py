@@ -2,14 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import hmean
 from functions import get_mask, get_blobs, get_widths_bwd
-
-
-
+import scipy.io
 ## Read mask
 num_pom_eks = [27, 18, 17, 9, 14, 18, 4, 15, 8, 8, 14, 20, 14, 20, 11, 17, 19, 27, 17, 26]
 obr_num = 1
-pth = f"CALE_OBRAZKI/Masks/{obr_num}_Mask.mat"
-MASK = np.load(pth)
+pth = "D:/GRUBA_MEMBRANA_PROJEKT/Proj_1/CALE_OBRAZKI/Masks/1_Mask.mat"
+MASK = scipy.io.loadmat(pth)
 mask = MASK['ABCD']
 
 # Smoothe mask
@@ -23,7 +21,6 @@ mask_attributes_struct, num_blobs = get_blobs(maska_membrana)
 # Get widths
 step = 20
 start = 30
-# widths = get_widths_inc(start, step, mask_attributes_struct, num_blobs)
 widths = get_widths_bwd(start, step, mask_attributes_struct, num_blobs)
 
 # pix -> nm
