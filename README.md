@@ -24,10 +24,10 @@ Description: Measures membrane widths along the skeletonized membrane structures
 Usage: widths = get_widths_bwd(start, step, result_array_for_masks,result_array_for_skels, num_blobs)
 
 ## Usage
- - Import the  functions into your Python environment.
+ - Import functions into your Python environment.
  - Load your binary membrane image.
  - Apply get_mask to smoothen the mask if needed.
- - Use get_blobs to extract membrane blobs and their attributes.
- - Measure membrane widths using either get_widths_inc or get_widths_bwd.
+ - Use get_blobs to extract membrane blobs and their attributes (skeletion, edges).
+ - Measure membrane widths using get_widths_bwd.
  - Calculate the harmonic mean of membrane widths using hmean.
  - Analyze and interpret the results for your specific application.
