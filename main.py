@@ -33,5 +33,5 @@ r = np.random.choice(len(widths_nm), N, replace=False)
 h_mean = hmean(widths_nm)
 h_mean_r20 = hmean(widths_nm[r])
 
-print("Harmonic mean:", h_mean)
-print("Harmonic mean with random 20 samples:", h_mean_r20)
+print("Harmonic mean: ", h_mean)
+print("Harmonic mean with random 20 samples: ", h_mean_r20)
