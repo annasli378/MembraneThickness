@@ -4,74 +4,76 @@ from scipy.ndimage import distance_transform_edt
 from skimage.morphology import binary_closing, binary_opening, disk, binary_dilation, binary_erosion, remove_small_holes, remove_small_objects
 from skimage.measure import label, regionprops
 from skimage.morphology import skeletonize, remove_small_objects
-from skimage.segmentation import clear_border
-
-def remove_small_branches(binary_image, min_branch_length):
-    binary_image = binary_image.astype(bool)
-    skeleton = skeletonize(binary_image)
-    labeled_skeleton = label(skeleton)
-
-    # Iterate through each label (branch) and calculate its length
-    branch_lengths = {}
-    for region in regionprops(labeled_skeleton):
-        # Calculate the length of the branch
-        branch_length = np.sum(region.image)
-        branch_label = region.label
-        branch_lengths[branch_label] = branch_length
-
-    # Create a mask to filter out branches shorter than the minimum length
-    valid_branches_mask = np.zeros_like(skeleton)
-    for branch_label, branch_length in branch_lengths.items():
-        if branch_length >= min_branch_length:
-            valid_branches_mask[labeled_skeleton == branch_label] = 1
-
-    clean_mask = clear_border(valid_branches_mask)
-    return clean_mask
 
 def get_blobs(maska_membrana):
     labeled_image, num_blobs = label(maska_membrana, return_num=True)
-    rows, kols = maska_membrana.shape
+    rows, cols = maska_membrana.shape
 
-    mask_atr = []
+    result_array_for_masks = np.zeros([num_blobs, rows + 10, cols + 10], dtype=np.uint8)
+    result_array_for_skels = np.zeros([num_blobs, rows + 10, cols + 10], dtype=np.uint8)
+    result_array_for_edges = np.zeros([num_blobs, rows + 10, cols + 10], dtype=np.uint8)
+
+    cnt_blob = 0
+
     for i in range(1, num_blobs + 1):
-        skiel = skeletonize(labeled_image == i)
-        edges = remove_small_branches(labeled_image == i, min_branch_length=200)
+        image_i = (labeled_image == i)
 
-        pix_list_edges = regionprops(edges.astype(int), coordinates='xy')[0].coords
+        # Pad the image with zeros
+        padded_image = np.pad(image_i, pad_width=5, mode='constant', constant_values=0)
+
+        # Skeletonize
+        skiel = skeletonize(padded_image)
+
+        # Calculate edges
+        edges = np.abs(padded_image.astype(np.uint8) - binary_dilation(padded_image, footprint=disk(3))).astype(
+            np.uint8)
+
+        # Calculate properties of edges
+        props_edges = regionprops(edges.astype(int))
+        pix_list_edges = props_edges[0].coords
         len_edges = len(pix_list_edges)
 
         len_tx, len_bx, len_ry, len_ly = 0, 0, 0, 0
         for e in pix_list_edges:
-            pixe = e
-            if pixe[0] == 0:
-                len_ly += 1
-            elif pixe[0] == kols:
-                len_ry += 1
-            if pixe[1] == 0:
+            if e[0] <= 5:
                 len_tx += 1
-            elif pixe[1] == rows:
+            elif e[0] >= rows:
                 len_bx += 1
+            if e[1] <= 5:
+                len_ly += 1
+            elif e[1] >= cols:
+                len_ry += 1
 
+        # print(len_tx)
+        # print(len_bx)
+        # print(len_ry)
+        # print(len_ly)
+        # print(len_edges)
+
+        # Check if more than 1/4 of the edge is connected to the image edge
         if len_tx > len_edges / 4 or len_bx > len_edges / 4 or len_ly > len_edges / 4 or len_ry > len_edges / 4:
-            print("object is too adjacent to the edge")
+            print("Object is too adjacent to the edge")
         else:
             if np.sum(skiel) > 0:
-                mask_atr.append({'mask': labeled_image == i, 'skel': skiel, 'edges': edges})
+                result_array_for_masks[cnt_blob] = padded_image
+                result_array_for_skels[cnt_blob] = skiel
+                result_array_for_edges[cnt_blob] = edges
+                cnt_blob += 1
 
-    return mask_atr, len(mask_atr)
+    return result_array_for_masks, result_array_for_skels, result_array_for_edges, cnt_blob - 1
 
 
 def get_mask(m):
     mask_m = (m == 1)
-    ex = regionprops(mask_m.astype(int), extra_properties=['extent'])
+    ex = regionprops(mask_m.astype(int))
     so = disk(15)
     for prop in ex:
         if prop.extent < 0.1:
             so = disk(5)
 
-    BC = binary_closing(mask_m, selem=disk(15))
-    BO = binary_opening(BC, selem=so)
-    BO = binary_dilation(BO, selem=disk(15))
+    BC = binary_closing(mask_m, footprint=disk(15))
+    BO = binary_opening(BC, footprint=so)
+    BO = binary_dilation(BO, footprint=disk(15))
 
     filled = remove_small_holes(BO, area_threshold=18000)
     holes = filled & ~BO
@@ -80,26 +82,26 @@ def get_mask(m):
 
     new = BO | smallholes
 
-    new = binary_erosion(new, selem=disk(15))
-    new = binary_dilation(new, selem=disk(5))
+    new = binary_erosion(new, footprint=disk(15))
+    new = binary_dilation(new, footprint=disk(5))
 
     return new
 
 
-def get_widths_bwd(start, step, mask_atr, num_blobs):
+def get_widths_bwd(start, step, result_array_for_masks, result_array_for_skels, num_blobs):
     widths_good = []
 
     for i in range(num_blobs):
-        skel_pix = regionprops(mask_atr[i]['skel'].astype(int), coordinates='xy')[0].coords
+        blob_skel = result_array_for_skels[i]
+        skel_pix = regionprops(blob_skel)[0].coords
         skel_len = len(skel_pix)
+        print(skel_len)
         stop = skel_len - start
-        mask = mask_atr[i]['mask']
-        skel_image = mask_atr[i]['skel']
+        blob_mask = result_array_for_masks[i]
 
-        edt_image = np.array(distance_transform_edt(~mask), dtype=np.float32)
-        diameter_image = 2 * edt_image * skel_image.astype(np.float32)
+        edt_image = np.array(distance_transform_edt(~blob_mask), dtype=np.float32)
+        diameter_image = 2 * edt_image * blob_skel.astype(np.float32)
         widths = diameter_image[diameter_image > 0]
-
         for w in range(start, stop, step):
             widths_good.append(widths[w])
 
